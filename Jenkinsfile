@@ -1,8 +1,8 @@
 pipeline {
     agent any
 
-    tools {
-        python 'Python3' // Make sure you have configured this in Jenkins Global Tools
+    environment {
+        SONARQUBE_ENV = 'MySonarQubeServer'
     }
 
     stages {
@@ -12,31 +12,44 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Setup Python Environment') {
             steps {
-                sh 'pip install -r requirements.txt'
+                sh '''
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'pytest tests/'
+                sh '''
+                    . venv/bin/activate
+                    pytest tests/ --junitxml=results.xml
+                '''
             }
         }
 
         stage('SonarQube Analysis') {
-            environment {
-                scannerHome = tool 'SonarQube'
-            }
             steps {
-                withSonarQubeEnv('MySonarQubeServer') {
-                    sh 'sonar-scanner \
-                         -Dsonar.projectKey=My-Python-App \
-                         -Dsonar.sources=. \
-                         -Dsonar.host.url=http://65.2.141.49:9000 \
-                         -Dsonar.login=sqp_862bfe8dad631d86dc9e24edbc91ea336c5a4fae'
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=My-Python-App \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://65.2.141.49:9000 \
+                          -Dsonar.login=sqp_862bfe8dad631d86dc9e24edbc91ea336c5a4fae
+                    '''
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            junit 'results.xml'
         }
     }
 }
