@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        SONARQUBE_ENV = 'MySonarQubeServer'
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -12,12 +8,11 @@ pipeline {
             }
         }
 
-        stage('Setup Python Environment') {
+        stage('Install Dependencies') {
             steps {
                 sh '''
                     python3 -m venv venv
                     . venv/bin/activate
-                    pip install --upgrade pip
                     pip install -r requirements.txt
                 '''
             }
@@ -27,14 +22,14 @@ pipeline {
             steps {
                 sh '''
                     . venv/bin/activate
-                    pytest tests/ --junitxml=results.xml
+                    pytest tests/
                 '''
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                withSonarQubeEnv('MySonarQubeServer') {
                     sh '''
                         sonar-scanner \
                           -Dsonar.projectKey=My-Python-App \
@@ -44,12 +39,6 @@ pipeline {
                     '''
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            junit 'results.xml'
         }
     }
 }
