@@ -1,6 +1,16 @@
 pipeline {
     agent any
 
+    tools {
+        // Ensure this matches the SonarScanner name in Global Tool Configuration
+        sonarQubeScanner 'SonarScanner'
+    }
+
+    environment {
+        // Optional: You can also move credentials to Jenkins Secrets and use them securely
+        VENV = 'venv'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -11,8 +21,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    python3 -m venv venv
-                    . venv/bin/activate
+                    python3 -m venv ${VENV}
+                    . ${VENV}/bin/activate
                     pip install -r requirements.txt
                 '''
             }
@@ -21,7 +31,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    . venv/bin/activate
+                    . ${VENV}/bin/activate
                     pytest tests/
                 '''
             }
@@ -34,8 +44,8 @@ pipeline {
                         sonar-scanner \
                           -Dsonar.projectKey=My-Python-App \
                           -Dsonar.sources=. \
-                          -Dsonar.host.url=http://65.2.141.49:9000 \
-                          -Dsonar.login=sqp_862bfe8dad631d86dc9e24edbc91ea336c5a4fae
+                          -Dsonar.python.version=3 \
+                          -Dsonar.login=${SONAR_AUTH_TOKEN}
                     '''
                 }
             }
